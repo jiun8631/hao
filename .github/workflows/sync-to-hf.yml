@@ -2,7 +2,7 @@ name: Sync to Hugging Face Spaces
 
 on:
   push:
-    branches: [main]  # 如果你的主分支是 master，改成 [master]
+    branches: [main]  # 如果是 master，改成 [master]
 
 jobs:
   sync-to-hf:
@@ -11,12 +11,12 @@ jobs:
       - uses: actions/checkout@v3
         with:
           fetch-depth: 0
-          lfs: true  # 如果你的 Repo 有大檔案 (LFS)，保留這行
+          lfs: true  # 如果有大檔案 (LFS)，保留這行
 
       - name: Push to Hugging Face Space
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
-          git remote add hf https://huggingface.co/spaces/${{ secrets.HF_USERNAME }}/${{ secrets.SPACE_NAME }}
-          git push --force hf HEAD:main  # 這裡用 --force 做初始強制推送；之後可移除 --force
-          # 如果 HF Space 的分支不是 main，改成 HEAD:your-hf-branch
+          git push --force https://${{ secrets.HF_USERNAME }}:${{ secrets.HF_TOKEN }}@huggingface.co/spaces/${{ secrets.HF_USERNAME }}/${{ secrets.SPACE_NAME }} HEAD:main
+          # 移除 --force 如果你不想強制推送
+          # 如果 HF 分支不是 main，改成 HEAD:your-hf-branch
