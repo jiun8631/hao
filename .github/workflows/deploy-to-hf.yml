@@ -1,0 +1,51 @@
+# 文件名: .github/workflows/deploy-to-hf.yml
+
+name: Build and Deploy to Hugging Face Space
+
+# 觸發條件：每當 main 分支有新的 push 操作時，就執行此工作流
+on:
+  push:
+    branches:
+      - main # 如果你的主分支是 master，請改成 master
+
+jobs:
+  deploy-to-space:
+    runs-on: ubuntu-latest # 使用最新的 Ubuntu 虛擬機來執行任務
+
+    steps:
+      # 第 1 步：簽出你的代碼
+      # 這個步驟會把你的 GitHub 倉庫代碼（包括主題子模塊）下載到虛擬機中
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          submodules: 'recursive'  # 非常重要，確保能拉取 themes 文件夾裡的主題
+          fetch-depth: 0         # 拉取所有 git 歷史，Hugo 可能需要它來獲取提交日期等信息
+
+      # 第 2 步：安裝並設置 Hugo 環境
+      - name: Setup Hugo
+        uses: peaceiris/actions-hugo@v2
+        with:
+          hugo-version: 'latest' # 使用最新版本的 Hugo
+          extended: true         # 安裝擴展版，很多主題需要 SASS/SCSS 支持
+
+      # 第 3 步：執行 Hugo 構建命令
+      # 這一步會生成一個 `public` 文件夾，裡面是完整的靜態網站文件
+      - name: Build with Hugo
+        run: hugo --minify # --minify 是可選項，可以壓縮 HTML/CSS/JS，讓網站更快
+
+      # 第 4 步：將構建好的 `public` 文件夾部署到 Hugging Face Space
+      # ⚠️ 這是唯一需要你修改的地方 ⚠️
+      - name: Deploy to Hugging Face Space
+        uses: crazy-max/ghaction-huggingface-space-sync@v3
+        with:
+          # 你的 HF Space 的 ID，格式是 `用戶名/Space名`
+          space: "hang3976/hao"  # 👈 把它換成你的！
+          
+          # HF Token，從 GitHub Secrets 中讀取我們剛剛設置的 HF_TOKEN
+          token: ${{ secrets.HF_TOKEN }}
+          
+          # 要部署的本地文件夾，也就是 Hugo 生成的 public 文件夾
+          source: "public"
+          
+          # 部署到 Space 的哪個文件夾，根目錄就是 "."
+          dest: "."
