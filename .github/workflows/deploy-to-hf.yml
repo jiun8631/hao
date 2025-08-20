@@ -1,6 +1,6 @@
 # 文件名: .github/workflows/deploy-to-hf.yml
 
-name: Build and Deploy to HF Space (v6 - Token over SSH)
+name: Build and Deploy to HF Space (v7 - Final Branch Fix)
 
 on:
   push:
@@ -30,25 +30,26 @@ jobs:
       - name: Build with Hugo
         run: hugo --minify
 
-      # 第 4 步：使用 Access Token 進行 SSH 協議部署
+      # 第 4 步：修复分支名并使用 Token over SSH 部署
       # ⚠️ 這是唯一需要你修改的地方 ⚠️
-      - name: Deploy to HF Space via Token over SSH
+      - name: Deploy to HF Space (Branch Fixed)
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
-          HF_USER: "hang3976"     # 👈 把它換成你的 HF 用戶名
+          HF_USER: "yong3976"     # 👈 把它換成你的 HF 用戶名
           SPACE_NAME: "hao"  # 👈 把它換成你的 Space 名
         run: |
-          # 配置 SSH 環境，自動接受 hf.co 的主機密鑰
-          mkdir -p ~/.ssh
-          ssh-keyscan hf.co >> ~/.ssh/known_hosts
-
           # 進入 Hugo 生成的 public 文件夾
           cd public
           
           # 初始化 Git 倉庫
           git init
           
-          # 安裝並配置 Git LFS
+          # 【【【 关键修正处 】】】
+          # 无论默认分支名叫什么，我们都强制创建一个名为 `main` 的分支并切换过去
+          # git checkout -b <branch_name> 会创建新分支并立即切换
+          git checkout -b main
+          
+          # 安装並配置 Git LFS
           git lfs install
           echo '* filter=lfs diff=lfs merge=lfs' > .gitattributes
           
@@ -56,23 +57,14 @@ jobs:
           git config user.email "action@github.com"
           git config user.name "GitHub Action"
           
-          # 【【【 關鍵改動處 】】】
-          # 構造一個特殊的 SSH URL，格式為 git@hf.co:spaces/用戶名/Space名
-          # Git 在使用這個 URL 時，會提示輸入密碼，我們將使用 HF_TOKEN 作為密碼
-          HF_SPACE_GIT_SSH_URL="git@hf.co:spaces/${HF_USER}/${SPACE_NAME}"
-          
-          # 添加遠程倉庫
-          git remote add hf_space "${HF_SPACE_GIT_SSH_URL}"
+          # 添加遠程倉庫地址
+          HF_SPACE_GIT_URL="https://hf_token:${HF_TOKEN}@huggingface.co/spaces/${HF_USER}/${SPACE_NAME}"
+          git remote add hf_space "${HF_SPACE_GIT_URL}"
           
           # 添加所有文件並提交
           git add .
           git commit -m "Deploy from GitHub Action ${{ github.sha }}"
           
-          # 【【【 關鍵改動處 】】】
-          # 設置一個臨時的 GIT_SSH_COMMAND，它會使用 `sshpass` 工具自動輸入密碼
-          # 這樣就可以在非交互環境下完成需要密碼的 SSH 操作
-          sudo apt-get update && sudo apt-get install -y sshpass
-          export GIT_SSH_COMMAND="sshpass -p '${HF_TOKEN}' ssh"
-          
           # 強制推送到 HF Space 的 main 分支
-          git push --force -u hf_space main
+          # 现在本地分支名和远程目标分支名都是 main，不会再出错了
+          git push --force hf_space main
