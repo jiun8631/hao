@@ -1,6 +1,6 @@
 # 文件名: .github/workflows/deploy-to-hf.yml
 
-name: Build and Deploy to Hugging Face Space (v3 - LFS Support)
+name: Build and Deploy to Hugging Face Space (v4 - Correct LFS)
 
 on:
   push:
@@ -12,65 +12,57 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 第 1 步：簽出你的代碼（和之前一樣）
+      # 第 1 步：簽出你的代碼
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           submodules: 'recursive'
           fetch-depth: 0
 
-      # 第 2 步：安裝並設置 Hugo 環境（和之前一樣）
+      # 第 2 步：安裝並設置 Hugo 環境
       - name: Setup Hugo
         uses: peaceiris/actions-hugo@v2
         with:
           hugo-version: 'latest'
           extended: true
 
-      # 第 3 步：執行 Hugo 構建命令（和之前一樣）
+      # 第 3 步：執行 Hugo 構建命令
       - name: Build with Hugo
         run: hugo --minify
 
-      # 第 4 步：安装 Git LFS 并部署到 Hugging Face Space
-      # ⚠️ 这是唯一需要你修改的地方 ⚠️
-      - name: Deploy to HF Space with LFS
+      # 第 4 步：使用正確的方式配置 LFS 並部署
+      # ⚠️ 這是唯一需要你修改的地方 ⚠️
+      - name: Deploy to HF Space with LFS (Corrected)
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
           HF_USER: "hang3976"     # 👈 把它換成你的 HF 用戶名
           SPACE_NAME: "hao"  # 👈 把它換成你的 Space 名
         run: |
-          # 更新包列表并安装 git-lfs
-          sudo apt-get update
-          sudo apt-get install -y git-lfs
-
           # 進入 Hugo 生成的 public 文件夾
           cd public
           
           # 初始化 Git 倉庫
           git init
           
-          # 关键：安装 LFS 到这个本地仓库
+          # 安裝 Git LFS (日誌顯示它已存在，但保留此命令是個好習慣)
           git lfs install
           
           # 配置 Git 用戶信息
-          git config --global user.email "action@github.com"
-          git config --global user.name "GitHub Action"
+          git config user.email "action@github.com"
+          git config user.name "GitHub Action"
           
           # 添加遠程倉庫地址
           git remote add hf_space https://hf_token:${HF_TOKEN}@huggingface.co/spaces/${HF_USER}/${SPACE_NAME}
           
-          # 关键：告訴 Git 哪些文件應該使用 LFS。
-          # 這裡我們用一個通配符 "*" 告訴它“所有文件”都由 LFS 跟踪。
-          # 这可以解决文件数量过多的问题，即使它们不是大文件。
-          git attribute --add * filter=lfs diff=lfs merge=lfs
+          # 【【【 關鍵修正處 】】】
+          # 使用 echo 命令直接創建 .gitattributes 文件，告訴 Git 所有文件都用 LFS 處理
+          echo '* filter=lfs diff=lfs merge=lfs' > .gitattributes
           
-          # 提交 .gitattributes 文件，这个文件记录了 LFS 的规则
-          git add .gitattributes
-          git commit -m "Add .gitattributes for LFS"
-          
-          # 添加所有網站文件并提交
+          # 添加所有網站文件（包括剛創建的 .gitattributes）
           git add .
+          
+          # 創建一個提交
           git commit -m "Deploy from GitHub Action ${{ github.sha }}"
           
           # 強制推送到 HF Space 的 main 分支
-          # 加上 --progress 可以在日志中看到更详细的上传进度
-          git push --force --progress hf_space main
+          git push --force hf_space main
