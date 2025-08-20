@@ -1,12 +1,11 @@
 # 文件名: .github/workflows/deploy-to-hf.yml
 
-name: Build and Deploy to Hugging Face Space (via Git)
+name: Build and Deploy to Hugging Face Space (v3 - LFS Support)
 
-# 觸發條件：每當 main 分支有新的 push 操作時，就執行此工作流
 on:
   push:
     branches:
-      - main # 如果你的主分支是 master，請改成 master
+      - main # 如果你的主分支是 master，请改成 master
 
 jobs:
   build-and-deploy:
@@ -15,7 +14,7 @@ jobs:
     steps:
       # 第 1 步：簽出你的代碼（和之前一樣）
       - name: Checkout repository
-        uses: actions/checkout@v4 # 更新到 v4 版本，更穩定
+        uses: actions/checkout@v4
         with:
           submodules: 'recursive'
           fetch-depth: 0
@@ -31,34 +30,47 @@ jobs:
       - name: Build with Hugo
         run: hugo --minify
 
-      # 第 4 步：使用 Git 部署到 Hugging Face Space (這是新的部分)
-      # ⚠️ 這是唯一需要你修改的地方 ⚠️
-      - name: Deploy to HF Space
+      # 第 4 步：安装 Git LFS 并部署到 Hugging Face Space
+      # ⚠️ 这是唯一需要你修改的地方 ⚠️
+      - name: Deploy to HF Space with LFS
         env:
-          # 從 GitHub Secrets 讀取 HF Token
-          HF_TOKEN: ${{ secrets.HF_TOKEN }} 
-          # 你的 HF 用戶名
-          HF_USER: "hang3976" # 👈 把它換成你的 HF 用戶名，例如 "hang3976"
-          # 你的 HF Space 名
-          SPACE_NAME: "hao" # 👈 把它換成你的 Space 名，例如 "hao"
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          HF_USER: "hang3976"     # 👈 把它換成你的 HF 用戶名
+          SPACE_NAME: "hao"  # 👈 把它換成你的 Space 名
         run: |
+          # 更新包列表并安装 git-lfs
+          sudo apt-get update
+          sudo apt-get install -y git-lfs
+
           # 進入 Hugo 生成的 public 文件夾
           cd public
           
-          # 初始化一個新的 Git 倉庫
+          # 初始化 Git 倉庫
           git init
+          
+          # 关键：安装 LFS 到这个本地仓库
+          git lfs install
           
           # 配置 Git 用戶信息
           git config --global user.email "action@github.com"
           git config --global user.name "GitHub Action"
           
-          # 添加遠程倉庫地址，格式包含了用戶名和密鑰，用於認證
-          # hf_token 是一个特殊的用户名，Hugging Face 会识别它并使用后面的密码作为 Token
+          # 添加遠程倉庫地址
           git remote add hf_space https://hf_token:${HF_TOKEN}@huggingface.co/spaces/${HF_USER}/${SPACE_NAME}
           
-          # 添加所有文件並提交
+          # 关键：告訴 Git 哪些文件應該使用 LFS。
+          # 這裡我們用一個通配符 "*" 告訴它“所有文件”都由 LFS 跟踪。
+          # 这可以解决文件数量过多的问题，即使它们不是大文件。
+          git attribute --add * filter=lfs diff=lfs merge=lfs
+          
+          # 提交 .gitattributes 文件，这个文件记录了 LFS 的规则
+          git add .gitattributes
+          git commit -m "Add .gitattributes for LFS"
+          
+          # 添加所有網站文件并提交
           git add .
           git commit -m "Deploy from GitHub Action ${{ github.sha }}"
           
-          # 強制推送到 HF Space 的 main 分支，覆盖所有旧文件
-          git push --force hf_space main
+          # 強制推送到 HF Space 的 main 分支
+          # 加上 --progress 可以在日志中看到更详细的上传进度
+          git push --force --progress hf_space main
