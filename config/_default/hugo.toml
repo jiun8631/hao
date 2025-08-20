@@ -3,14 +3,11 @@
 # https://blowfish.page/docs/getting-started/
 
 theme = "blowfish"
-baseURL = "https://hang3976-hao.static.hf.space/"
+baseURL = "https://localhost:1313"
 defaultContentLanguage = "en"
 disableLanguages = [] #to allow translation work requiring shipping to production
 
 # pluralizeListTitles = "true" # hugo function useful for non-english languages, find out more in  https://gohugo.io/getting-started/configuration/#pluralizelisttitles
-
-# 强制 Hugo 生成以 .html 结尾的文件链接，例如 /posts/my-post.html
-uglyURLs = true
 
 enableRobotsTXT = true
 summaryLength = 30
