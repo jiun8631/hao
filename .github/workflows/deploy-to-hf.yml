@@ -1,6 +1,6 @@
 # 文件名: .github/workflows/deploy-to-hf.yml
 
-name: Build and Deploy to HF Space (v7 - Final Branch Fix)
+name: Build and Deploy to Hugging Face Space (v8 - Correct Username)
 
 on:
   push:
@@ -30,26 +30,22 @@ jobs:
       - name: Build with Hugo
         run: hugo --minify
 
-      # 第 4 步：修复分支名并使用 Token over SSH 部署
-      # ⚠️ 這是唯一需要你修改的地方 ⚠️
-      - name: Deploy to HF Space (Branch Fixed)
+      # 第 4 步：使用正確的用戶名進行部署
+      # ⚠️ 請仔細檢查下面的信息，確保萬無一失！⚠️
+      - name: Deploy to HF Space (Username Corrected)
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
-          HF_USER: "yong3976"     # 👈 把它換成你的 HF 用戶名
-          SPACE_NAME: "hao"  # 👈 把它換成你的 Space 名
+          HF_USER: "hang3976"     # 👈【【【 最關鍵的修正處 】】】 請確認這是您正確的 HF 用戶名！
+          SPACE_NAME: "hao"       # 👈 請確認這是您正確的 Space 名稱！
         run: |
           # 進入 Hugo 生成的 public 文件夾
           cd public
           
-          # 初始化 Git 倉庫
+          # 初始化 Git 倉庫並強制創建 main 分支
           git init
-          
-          # 【【【 关键修正处 】】】
-          # 无论默认分支名叫什么，我们都强制创建一个名为 `main` 的分支并切换过去
-          # git checkout -b <branch_name> 会创建新分支并立即切换
           git checkout -b main
           
-          # 安装並配置 Git LFS
+          # 安裝並配置 Git LFS
           git lfs install
           echo '* filter=lfs diff=lfs merge=lfs' > .gitattributes
           
@@ -57,7 +53,7 @@ jobs:
           git config user.email "action@github.com"
           git config user.name "GitHub Action"
           
-          # 添加遠程倉庫地址
+          # 添加遠程倉庫地址 (使用正確的用戶名)
           HF_SPACE_GIT_URL="https://hf_token:${HF_TOKEN}@huggingface.co/spaces/${HF_USER}/${SPACE_NAME}"
           git remote add hf_space "${HF_SPACE_GIT_URL}"
           
@@ -66,5 +62,4 @@ jobs:
           git commit -m "Deploy from GitHub Action ${{ github.sha }}"
           
           # 強制推送到 HF Space 的 main 分支
-          # 现在本地分支名和远程目标分支名都是 main，不会再出错了
           git push --force hf_space main
