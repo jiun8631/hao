@@ -1,0 +1,13 @@
+name: Master Branch Trigger Test
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  hello_world_job:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Say hello
+        run: echo "Hello, the master branch trigger is working!"
